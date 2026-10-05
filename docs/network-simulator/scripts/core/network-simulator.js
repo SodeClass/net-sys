@@ -1010,14 +1010,14 @@ class NetworkSimulator {
             },
             'switch': {
                 nics: [
-                    { id: 'port1', label: 'P1', x: 0, y: 0.15 },
-                    { id: 'port2', label: 'P2', x: 0, y: 0.35 },
-                    { id: 'port3', label: 'P3', x: 0, y: 0.55 },
-                    { id: 'port4', label: 'P4', x: 0, y: 0.75 },
-                    { id: 'port5', label: 'P5', x: 1, y: 0.15 },
-                    { id: 'port6', label: 'P6', x: 1, y: 0.35 },
-                    { id: 'port7', label: 'P7', x: 1, y: 0.55 },
-                    { id: 'port8', label: 'P8', x: 1, y: 0.75 }
+                    { id: 'port1', label: 'P1', x: 0, y: 0.15, vlan: '1' },
+                    { id: 'port2', label: 'P2', x: 0, y: 0.35, vlan: '1' },
+                    { id: 'port3', label: 'P3', x: 0, y: 0.55, vlan: '1' },
+                    { id: 'port4', label: 'P4', x: 0, y: 0.75, vlan: '1' },
+                    { id: 'port5', label: 'P5', x: 1, y: 0.15, vlan: '1' },
+                    { id: 'port6', label: 'P6', x: 1, y: 0.35, vlan: '1' },
+                    { id: 'port7', label: 'P7', x: 1, y: 0.55, vlan: '1' },
+                    { id: 'port8', label: 'P8', x: 1, y: 0.75, vlan: '1' }
                 ]
             },
             'onu': {
@@ -3809,8 +3809,14 @@ class NetworkSimulator {
         const hasRouter = path.some(device => device.type === 'router');
         
         if (!hasRouter) {
-            return { 
-                isReachable: false, 
+            if (this.isInSameSubnet(sourceIP, targetIP, sourceSubnet) && this.isInSameSubnet(targetIP, sourceIP, targetSubnet)) {
+                return {
+                    isReachable: false,
+                    reason: "VLANまたは物理的セグメントが異なるため直接通信できません"
+                };
+            }
+            return {
+                isReachable: false,
                 reason: `${subnetMismatchReason}のためルーターが必要です`
             };
         }
@@ -4280,7 +4286,52 @@ class NetworkSimulator {
             return this.checkSameRouterPortCommunication(targetDevice, sourceDevice);
         }
 
+        // VLANの連続性をチェック（途中のスイッチでVLANが合わない場合は遮断）
+        if (!this.checkVlanContinuity(path)) {
+            console.log(`🚫 VLAN分離: ${sourceDevice.name} と ${targetDevice.name} は異なるVLANセグメント`);
+            return false;
+        }
+
         console.log(`✅ 同一セグメント: ${sourceDevice.name} と ${targetDevice.name}`);
+        return true;
+    }
+
+    // 経路上のVLAN連続性をチェック
+    checkVlanContinuity(path) {
+        if (path.length < 2) return true;
+
+        let currentVlan = null;
+
+        for (let i = 0; i < path.length - 1; i++) {
+            const current = path[i];
+            const next = path[i + 1];
+            const conn = this.findConnectionBetween(current, next);
+            if (!conn) continue;
+
+            const currentPort = conn.from.device === current ? conn.from.port : conn.to.port;
+            const nextPort = conn.from.device === next ? conn.from.port : conn.to.port;
+
+            // current -> next の移動
+            if (current.type === 'switch') {
+                const outVlan = currentPort.vlan || '1';
+                if (outVlan !== 'Trunk') {
+                    if (currentVlan && currentVlan !== outVlan) {
+                        return false; // スイッチ内でVLAN不一致
+                    }
+                    currentVlan = outVlan;
+                }
+            }
+
+            if (next.type === 'switch') {
+                const inVlan = nextPort.vlan || '1';
+                if (inVlan !== 'Trunk') {
+                    if (currentVlan && currentVlan !== inVlan) {
+                        return false; // ケーブル間でVLAN不一致
+                    }
+                    currentVlan = inVlan;
+                }
+            }
+        }
         return true;
     }
 
@@ -4580,12 +4631,50 @@ class NetworkSimulator {
             }
             return 1; // 異なるサブネットまたは異なるセグメントなら送信元から出られない
         }
-        
         // 物理接続がない場合：送信元から出られない
-        if (reason.includes('物理接続経路がありません')) {
+        if (reason.includes("物理接続経路がありません")) {
             return 1;
         }
-        
+
+        // VLANまたは物理的セグメントが異なる場合
+        if (reason.includes("VLANまたは物理的セグメントが異なる")) {
+            let reachableHops = 1;
+            let currentVlan = null;
+
+            for (let i = 0; i < path.length - 1; i++) {
+                const current = path[i];
+                const next = path[i + 1];
+                const conn = this.findConnectionBetween(current, next);
+                if (!conn) break;
+
+                const currentPort = conn.from.device === current ? conn.from.port : conn.to.port;
+                const nextPort = conn.from.device === next ? conn.from.port : conn.to.port;
+
+                if (current.type === "switch") {
+                    const outVlan = currentPort.vlan || "1";
+                    if (outVlan !== "Trunk") {
+                        if (currentVlan && currentVlan !== outVlan) {
+                            break;
+                        }
+                        currentVlan = outVlan;
+                    }
+                }
+
+                if (next.type === "switch") {
+                    const inVlan = nextPort.vlan || "1";
+                    if (inVlan !== "Trunk") {
+                        if (currentVlan && currentVlan !== inVlan) {
+                            reachableHops++;
+                            break;
+                        }
+                        currentVlan = inVlan;
+                    }
+                }
+                reachableHops++;
+            }
+            return reachableHops;
+        }
+
         // ルーターが必要だが存在しない場合：同一サブネット内のスイッチまで到達
         if (reason.includes('ルーターが必要') || reason.includes('異なるサブネット')) {
             // 最初のスイッチ（非ルーター）まで到達
@@ -5539,6 +5628,9 @@ class NetworkSimulator {
     // スイッチのフラッディング対象デバイス一覧を取得（受信ポートおよび本来の宛先を除く）
     getFloodingTargetDevices(switchDevice, inPortId, targetDevice) {
         const targets = [];
+        const inPort = (switchDevice.ports?.nics || []).find(p => p.id === inPortId);
+        const inVlan = inPort ? (inPort.vlan || '1') : '1';
+
         for (const conn of this.connections) {
             let otherDev = null;
             let switchPort = null;
@@ -5550,7 +5642,11 @@ class NetworkSimulator {
                 switchPort = conn.to?.port;
             }
             if (otherDev && otherDev !== targetDevice && switchPort && switchPort.id !== inPortId) {
-                targets.push({ device: otherDev, port: switchPort });
+                const outVlan = switchPort.vlan || '1';
+                // Only flood if VLAN matches or one of them is Trunk
+                if (inVlan === 'Trunk' || outVlan === 'Trunk' || inVlan === outVlan) {
+                    targets.push({ device: otherDev, port: switchPort });
+                }
             }
         }
         return targets;
@@ -5601,35 +5697,47 @@ class NetworkSimulator {
             const packetList = [];
 
             if (isDstLearned) {
-                // 学習済み: MACテーブルを参照して該当ポートへのみフォワーディング
-                const portLabel = outPort?.label || outPort?.id || 'Port';
-                const msg = `🔌 [${currentDev.name}] 宛先MAC(${normalizedDstMAC})を検索 → ${portLabel}へスイッチング転送`;
-                this.updateStatus(msg);
-                console.log(msg);
+                // 学習済みの場合でも、VLANが一致しない（またはTrunkでない）ポートには出力しない
+                const inVlan = inPort ? (inPort.vlan || '1') : '1';
+                const outVlan = outPort ? (outPort.vlan || '1') : '1';
+                if (inVlan === 'Trunk' || outVlan === 'Trunk' || inVlan === outVlan) {
+                    const portLabel = outPort?.label || outPort?.id || 'Port';
+                    const msg = `🔌 [${currentDev.name}] 宛先MAC(${normalizedDstMAC})を検索 → ${portLabel}へスイッチング転送`;
+                    this.updateStatus(msg);
+                    console.log(msg);
 
-                packetList.push({
-                    fromDevice: currentDev,
-                    toDevice: nextDev,
-                    label: label,
-                    color: color,
-                    offsetX,
-                    offsetY
-                });
+                    packetList.push({
+                        fromDevice: currentDev,
+                        toDevice: nextDev,
+                        label: label,
+                        color: color,
+                        offsetX,
+                        offsetY
+                    });
+                } else {
+                    const msg = `🚫 [${currentDev.name}] 宛先MAC(${normalizedDstMAC})へのポートはVLANが異なるため破棄`;
+                    this.updateStatus(msg);
+                    console.log(msg);
+                }
             } else {
                 // 未学習: 全ポートへフラッディング（一斉同報）
                 const msg = `📢 [${currentDev.name}] 宛先MAC(${normalizedDstMAC || '不明'})は未学習 → 受信ポート以外の全ポートへフラッディング`;
                 this.updateStatus(msg);
                 console.log(msg);
 
-                // 本来の転送先（nextDev）へのパケット
-                packetList.push({
-                    fromDevice: currentDev,
-                    toDevice: nextDev,
-                    label: label,
-                    color: color,
-                    offsetX,
-                    offsetY
-                });
+                // 本来の転送先（nextDev）へのパケット（VLANが一致する場合のみ）
+                const inVlan = inPort ? (inPort.vlan || '1') : '1';
+                const outVlan = outPort ? (outPort.vlan || '1') : '1';
+                if (inVlan === 'Trunk' || outVlan === 'Trunk' || inVlan === outVlan) {
+                    packetList.push({
+                        fromDevice: currentDev,
+                        toDevice: nextDev,
+                        label: label,
+                        color: color,
+                        offsetX,
+                        offsetY
+                    });
+                }
 
                 // 受信ポート以外の他ポートの端末/機器へも同一パケットを一斉送信
                 const floodingTargets = this.getFloodingTargetDevices(currentDev, inPort?.id, nextDev);
@@ -6346,16 +6454,43 @@ class NetworkSimulator {
                     }
                 }
 
+                // Default vlan to '1' if not set
+                const vlan = port.vlan || '1';
+                const vlanSelect = `
+                    <select class="form-input vlan-select" data-port-id="${port.id}" style="padding: 2px 4px; font-size: 11px;">
+                        <option value="1" ${vlan === '1' ? 'selected' : ''}>VLAN 1</option>
+                        <option value="2" ${vlan === '2' ? 'selected' : ''}>VLAN 2</option>
+                        <option value="Trunk" ${vlan === 'Trunk' ? 'selected' : ''}>Trunk</option>
+                    </select>
+                `;
+
                 if (connectedInfo && connectedInfo.device) {
                     const devName = connectedInfo.device.name;
                     const portLabel = connectedInfo.port?.label || connectedInfo.port?.id || '';
-                    html += `<tr><td><strong>${port.label}</strong></td><td><span class="status-badge connected">UP</span></td><td>${devName} (${portLabel})</td></tr>`;
+                    html += `<tr><td><strong>${port.label}</strong></td><td>${vlanSelect}</td><td><span class="status-badge connected">UP</span></td><td>${devName} (${portLabel})</td></tr>`;
                 } else {
-                    html += `<tr><td><strong>${port.label}</strong></td><td><span class="status-badge disconnected">DOWN</span></td><td style="color: #94a3b8; font-style: italic;">未接続</td></tr>`;
+                    html += `<tr><td><strong>${port.label}</strong></td><td>${vlanSelect}</td><td><span class="status-badge disconnected">DOWN</span></td><td style="color: #94a3b8; font-style: italic;">未接続</td></tr>`;
                 }
             });
 
             portsBody.innerHTML = html;
+
+            // Add event listeners for VLAN changes
+            portsBody.querySelectorAll('.vlan-select').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    const portId = e.target.getAttribute('data-port-id');
+                    const newVlan = e.target.value;
+                    const port = switchDevice.ports.nics.find(p => p.id === portId);
+                    if (port) {
+                        port.vlan = newVlan;
+                        // Clear MAC table on VLAN change for consistency
+                        switchDevice.macTable.clear();
+                        this.renderSwitchMACTable(switchDevice);
+                        this.updateStatus(`🔌 ${switchDevice.name} の ${port.label} を ${newVlan === 'Trunk' ? 'Trunk' : 'VLAN ' + newVlan} に変更し、MACテーブルをクリアしました`);
+                        this.scheduleRender();
+                    }
+                });
+            });
         }
 
         // 2. MACアドレステーブルの描画
