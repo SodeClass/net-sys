@@ -5127,14 +5127,16 @@ class NetworkSimulator {
                 }
 
                 if (nextDevice && !visited.has(nextDevice.id)) {
-                    visited.add(nextDevice.id);
                     const newPath = [...path, nextDevice];
+                    if (!this.checkVlanContinuity(newPath)) continue;
 
-                    if (nextDevice.type === 'router') {
+                    visited.add(nextDevice.id);
+
+                    if (nextDevice.type === "router") {
                         // ルーターはブロードキャストパケットを受信し、境界として遮断（他ポートやWANへは転送しない）
                         domainDevices.push({ device: nextDevice, path: newPath });
                         boundaryRouters.push({ device: nextDevice, path: newPath });
-                    } else if (nextDevice.type === 'switch' || nextDevice.type === 'hub' || nextDevice.type === 'onu') {
+                    } else if (nextDevice.type === "switch" || nextDevice.type === "hub" || nextDevice.type === "onu") {
                         // L2機器: フラッディング・透過するため探索を継続
                         domainDevices.push({ device: nextDevice, path: newPath });
                         queue.push(newPath);
@@ -6510,10 +6512,10 @@ class NetworkSimulator {
                 </select>
             </td>
             <td>
-                <input type="text" class="form-input" value="${rule.source}" placeholder="192.168.1.0/24 or any" style="padding: 4px;">
+                <input type="text" class="form-input" value="${rule.source}" placeholder="192.168.1.0/24 or any" list="device-ips-list" style="padding: 4px;">
             </td>
             <td>
-                <input type="text" class="form-input" value="${rule.destination}" placeholder="192.168.2.0/24 or any" style="padding: 4px;">
+                <input type="text" class="form-input" value="${rule.destination}" placeholder="192.168.2.0/24 or any" list="device-ips-list" style="padding: 4px;">
             </td>
             <td style="text-align: center;">
                 <button type="button" class="dialog-button delete-rule-btn" style="background-color: #1e3a8a; color: white; padding: 4px 8px; font-size: 14px; font-weight: bold; border-radius: 4px;">×</button>
