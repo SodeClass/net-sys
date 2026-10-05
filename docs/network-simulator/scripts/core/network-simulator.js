@@ -3850,6 +3850,27 @@ class NetworkSimulator {
             }
         }
         
+        // ルーター経由のACLチェック（フォワードおよびリバース）
+        const routers = path.filter(device => device.type === 'router');
+        for (const router of routers) {
+            // 送信元から宛先へのパケットを評価 (Forward)
+            const forwardResult = this.evaluateACL(router, sourceIP, targetIP);
+            if (!forwardResult.isPermitted) {
+                return {
+                    isReachable: false,
+                    reason: `ルーター [${router.name || router.id}] のACLにより、送信元(${sourceIP})から宛先(${targetIP})への通信がブロックされました。`
+                };
+            }
+            // 宛先から送信元へのパケットを評価 (Reverse - 応答パケット)
+            const reverseResult = this.evaluateACL(router, targetIP, sourceIP);
+            if (!reverseResult.isPermitted) {
+                return {
+                    isReachable: false,
+                    reason: `ルーター [${router.name || router.id}] のACLにより、宛先(${targetIP})から送信元(${sourceIP})への応答通信がブロックされました。`
+                };
+            }
+        }
+
         // ルーター経由の場合は成功
         const sourceNetwork = this.getNetworkAddress(sourceIP, sourceSubnet);
         const targetNetwork = this.getNetworkAddress(targetIP, targetSubnet);
@@ -3858,6 +3879,53 @@ class NetworkSimulator {
             reason: `ルーター経由での通信 (${sourceNetwork} → ${targetNetwork})`,
             routingType: 'routed'
         };
+    }
+
+    // IPがパターン（IPアドレスまたはCIDR, "any"）に一致するかチェック
+    isIpMatchCidr(ip, pattern) {
+        if (!pattern || pattern.trim() === '') return false;
+        pattern = pattern.trim().toLowerCase();
+        if (pattern === 'any') return true;
+        
+        // CIDR形式かチェック
+        if (pattern.includes('/')) {
+            const [networkStr, prefixStr] = pattern.split('/');
+            const prefix = parseInt(prefixStr, 10);
+            if (isNaN(prefix) || prefix < 0 || prefix > 32) return false;
+            if (!this.isValidIP(networkStr) || !this.isValidIP(ip)) return false;
+            
+            const ipInt = this.ipToInt(ip);
+            const netInt = this.ipToInt(networkStr);
+            const mask = prefix === 0 ? 0 : (~((1 << (32 - prefix)) - 1)) >>> 0;
+            return (ipInt & mask) === (netInt & mask);
+        } else {
+            // 完全一致
+            return ip === pattern;
+        }
+    }
+
+    // デバイスのACLルールを評価
+    evaluateACL(device, sourceIP, destinationIP) {
+        if (!device || !device.acl || device.acl.length === 0) {
+            return { isPermitted: true, reason: 'No ACL rules' };
+        }
+        
+        for (const rule of device.acl) {
+            const sourceMatch = this.isIpMatchCidr(sourceIP, rule.source);
+            const destMatch = this.isIpMatchCidr(destinationIP, rule.destination);
+            
+            if (sourceMatch && destMatch) {
+                if (rule.action === 'deny') {
+                    return { isPermitted: false, matchingRule: rule };
+                }
+                if (rule.action === 'permit') {
+                    return { isPermitted: true, matchingRule: rule };
+                }
+            }
+        }
+        
+        // デフォルトは許可 (Permit)
+        return { isPermitted: true, reason: 'Default permit' };
     }
 
     // ルーターの特定NICの物理接続状態をチェック
@@ -6281,6 +6349,17 @@ class NetworkSimulator {
             }
         }
         
+        // ACL設定（ルーターのみ表示）
+        const aclConfigSection = document.getElementById('acl-config-section');
+        if (aclConfigSection) {
+            if (this.selectedDevice.type === 'router') {
+                aclConfigSection.style.display = 'block';
+                this.loadACLConfig();
+            } else {
+                aclConfigSection.style.display = 'none';
+            }
+        }
+
         // WAN設定（ルーターのみ表示）
         const wanConfigSection = document.getElementById('wan-config-section');
         if (wanConfigSection) {
@@ -6403,6 +6482,55 @@ class NetworkSimulator {
 
         // 共通設定を読み込み
         document.getElementById('isp-lease-time').value = config.dhcpLeaseTime || 3600;
+    }
+
+    // ACLルールのテーブル行を追加
+    addACLRuleRow(rule = { action: 'permit', source: 'any', destination: 'any' }) {
+        const tbody = document.getElementById('acl-table-body');
+        const tr = document.createElement('tr');
+        
+        tr.innerHTML = `
+            <td>
+                <select class="form-input" style="padding: 4px;">
+                    <option value="permit" ${rule.action === 'permit' ? 'selected' : ''}>Permit (許可)</option>
+                    <option value="deny" ${rule.action === 'deny' ? 'selected' : ''}>Deny (拒否)</option>
+                </select>
+            </td>
+            <td>
+                <input type="text" class="form-input" value="${rule.source}" placeholder="192.168.1.0/24 or any" style="padding: 4px;">
+            </td>
+            <td>
+                <input type="text" class="form-input" value="${rule.destination}" placeholder="192.168.2.0/24 or any" style="padding: 4px;">
+            </td>
+            <td style="text-align: center;">
+                <button type="button" class="dialog-button delete-rule-btn" style="background-color: #ef4444; padding: 4px 8px; font-size: 11px;">削除</button>
+            </td>
+        `;
+
+        tr.querySelector('.delete-rule-btn').addEventListener('click', () => {
+            tr.remove();
+        });
+
+        tbody.appendChild(tr);
+    }
+
+    // ACL設定の読み込み
+    loadACLConfig() {
+        const tbody = document.getElementById('acl-table-body');
+        tbody.innerHTML = '';
+        
+        const aclRules = this.selectedDevice.acl || [];
+        aclRules.forEach(rule => {
+            this.addACLRuleRow(rule);
+        });
+        
+        // 追加ボタンのイベントリスナー（1回だけ登録するため削除して再登録）
+        const addBtn = document.getElementById('add-acl-rule-btn');
+        const newAddBtn = addBtn.cloneNode(true);
+        addBtn.parentNode.replaceChild(newAddBtn, addBtn);
+        newAddBtn.addEventListener('click', () => {
+            this.addACLRuleRow();
+        });
     }
 
     // WAN設定読み込み
@@ -7082,6 +7210,32 @@ class NetworkSimulator {
         if (wanManualConfig) {
             wanManualConfig.style.opacity = dhcpEnabled ? '0.6' : '1';
         }
+    }
+
+    // ACL設定の保存
+    saveACLConfig() {
+        const tbody = document.getElementById('acl-table-body');
+        const rows = tbody.querySelectorAll('tr');
+        const aclRules = [];
+        
+        rows.forEach(row => {
+            const selects = row.querySelectorAll('select');
+            const inputs = row.querySelectorAll('input');
+            
+            if (selects.length >= 1 && inputs.length >= 2) {
+                const action = selects[0].value;
+                const source = inputs[0].value.trim() || 'any';
+                const destination = inputs[1].value.trim() || 'any';
+                
+                aclRules.push({
+                    action,
+                    source,
+                    destination
+                });
+            }
+        });
+        
+        this.currentDeviceConfig.acl = aclRules;
     }
 
     // WAN設定保存
@@ -8743,8 +8897,11 @@ class NetworkSimulator {
             }
         }
         
-        // ルーターの場合はWAN設定とDHCPサーバー設定、NAT設定も保存
+        // ルーターの場合はWAN設定とDHCPサーバー設定、NAT設定、ACL設定も保存
         if (this.currentDeviceConfig.type === 'router') {
+            
+            // ACL設定を保存
+            this.saveACLConfig();
 
             // WAN設定を保存
             this.saveWANConfig();

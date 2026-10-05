@@ -105,6 +105,36 @@
             </div>
         </div>
         
+        <!-- ルーター専用のACL設定 -->
+        <div id="acl-config-section" style="display: none;">
+            <hr style="margin: 16px 0; border: none; border-top: 1px solid #ddd;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h4 style="margin: 0; color: #333;">ACL (アクセス制御リスト)</h4>
+            </div>
+            <p style="margin-bottom: 12px; color: #64748b; font-size: 12px;">
+                ルーターを通過するパケットをフィルタリングします。リストの上から順に評価され、一致したルールの処理が適用されます。ルールに一致しない場合はデフォルトで許可(Permit)されます。"any"を指定すると全てのIPに一致します。
+            </p>
+
+            <div class="table-container" style="margin-bottom: 8px; max-height: 200px; overflow-y: auto;">
+                <table class="config-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%">アクション</th>
+                            <th style="width: 30%">送信元IP/CIDR</th>
+                            <th style="width: 30%">宛先IP/CIDR</th>
+                            <th style="width: 15%">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="acl-table-body">
+                        <!-- 動的に追加 -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="text-align: right; margin-bottom: 8px;">
+                <button type="button" id="add-acl-rule-btn" class="dialog-button secondary" style="font-size: 12px; padding: 4px 12px; height: auto;">＋ ルール追加</button>
+            </div>
+        </div>
+
         <!-- ルーター専用のWAN設定 -->
         <div id="wan-config-section" style="display: none;">
             <hr style="margin: 16px 0; border: none; border-top: 1px solid #ddd;">
