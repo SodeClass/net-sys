@@ -5269,9 +5269,8 @@ class NetworkSimulator {
         if (respondingDevices.length > 0) {
             this.updateStatus(`⬅️ ICMP Reply受信中: ${respondingDevices.length}台のデバイスからユニキャスト応答を受信中...`);
 
-            // 各デバイスから送信元への復路（reversePath）を少し時間差をつけて送信
+            // 各デバイスから送信元への復路（reversePath）を一斉に送信
             const replyPromises = respondingDevices.map(async (item, idx) => {
-                await this.sleep(idx * 160);
                 const reversePath = [...item.path].reverse();
 
                 // 送信元のARPテーブルに応答元を登録
@@ -6202,6 +6201,10 @@ class NetworkSimulator {
     async animatePacketsParallel(packetRequests, duration = 1000) {
         if (!packetRequests || packetRequests.length === 0) return;
 
+        if (!this.globalAnimatingPackets) {
+            this.globalAnimatingPackets = [];
+        }
+
         return new Promise((resolve) => {
             const packets = packetRequests.map(req => {
                 const connectionPath = this.getConnectionPath(req.fromDevice, req.toDevice);
@@ -6218,6 +6221,8 @@ class NetworkSimulator {
                     offsetY: req.offsetY || 0
                 };
             });
+
+            this.globalAnimatingPackets.push(...packets);
 
             const startTime = Date.now();
 
@@ -6244,12 +6249,18 @@ class NetworkSimulator {
                     }
                 });
 
-                this.renderWithPackets(packets);
+                this.renderWithPackets(this.globalAnimatingPackets);
 
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
-                    this.render();
+                    packets.forEach(packet => {
+                        const index = this.globalAnimatingPackets.indexOf(packet);
+                        if (index > -1) {
+                            this.globalAnimatingPackets.splice(index, 1);
+                        }
+                    });
+                    this.renderWithPackets(this.globalAnimatingPackets); // 残りのパケットを描画するか、無ければ単一render
                     resolve();
                 }
             };
@@ -6262,11 +6273,18 @@ class NetworkSimulator {
     renderWithPackets(packets) {
         this.render();
         
+        const allPackets = new Set(packets || []);
+        if (this.globalAnimatingPackets) {
+            this.globalAnimatingPackets.forEach(p => allPackets.add(p));
+        }
+        
+        if (allPackets.size === 0) return;
+        
         this.ctx.save();
         this.ctx.translate(this.panX, this.panY);
         this.ctx.scale(this.scale, this.scale);
         
-        for (const packet of packets) {
+        for (const packet of allPackets) {
             this.ctx.fillStyle = packet.color;
             this.ctx.strokeStyle = '#fff';
             this.ctx.lineWidth = 2;
