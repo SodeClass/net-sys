@@ -137,49 +137,6 @@
             </div>
         </div>
 
-        <!-- ルーター専用のNAT (NAPT/IPマスカレード) 設定 & 変換テーブル -->
-        <div id="nat-config-section" style="display: none;">
-            <hr style="margin: 16px 0; border: none; border-top: 1px solid #ddd;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <h4 style="margin: 0; color: #333;">NAT / NAPT (IPマスカレード) 設定</h4>
-                <span style="font-size: 11px; background: #ecfdf5; color: #059669; padding: 2px 6px; border-radius: 4px; font-weight: bold;">レイヤ3/4 (アドレス・ポート変換)</span>
-            </div>
-            <p style="margin-bottom: 12px; color: #64748b; font-size: 12px;">
-                LAN内のプライベートIPアドレスをルーターのWANグローバルIPアドレス（ポート番号で識別）に変換し、インターネット通信を可能にします。
-            </p>
-            
-            <div class="form-group">
-                <label class="form-label" style="display: flex; align-items: center; cursor: pointer;">
-                    <input type="checkbox" id="nat-enabled" style="margin-right: 8px;">
-                    NAT / NAPT (IPマスカレード) 機能を有効にする
-                </label>
-            </div>
-
-            <!-- NAT変換テーブル -->
-            <div class="form-group" style="margin-top: 14px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <label class="form-label" style="margin: 0;">NAT変換テーブル (NAPT Table)</label>
-                    <button type="button" id="clear-nat-table-btn" class="dialog-button secondary" style="font-size: 11px; padding: 2px 8px; height: auto;">テーブルクリア</button>
-                </div>
-                <div class="table-container" style="max-height: 200px; overflow-y: auto;">
-                    <table class="config-table" style="font-size: 12px;">
-                        <thead>
-                            <tr>
-                                <th style="width: 50px;">プロトコル</th>
-                                <th>内部ローカル (Private)</th>
-                                <th>内部グローバル (WAN)</th>
-                                <th>宛先アドレス (Destination)</th>
-                                <th style="width: 70px;">状態</th>
-                            </tr>
-                        </thead>
-                        <tbody id="nat-table-body">
-                            <tr><td colspan="5" style="text-align: center; color: #94a3b8; font-style: italic;">変換エントリなし</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
         <!-- ルーター専用のDHCPサーバー設定 -->
         <div id="dhcp-server-section" style="display: none;">
             <hr style="margin: 16px 0; border: none; border-top: 1px solid #ddd;">
