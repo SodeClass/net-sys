@@ -6484,12 +6484,25 @@ class NetworkSimulator {
         document.getElementById('isp-lease-time').value = config.dhcpLeaseTime || 3600;
     }
 
+    // ACLルール番号を更新
+    updateACLRuleNumbers() {
+        const tbody = document.getElementById('acl-table-body');
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach((row, index) => {
+            const noCell = row.querySelector('.rule-number');
+            if (noCell) {
+                noCell.textContent = index + 1;
+            }
+        });
+    }
+
     // ACLルールのテーブル行を追加
     addACLRuleRow(rule = { action: 'permit', source: 'any', destination: 'any' }) {
         const tbody = document.getElementById('acl-table-body');
         const tr = document.createElement('tr');
         
         tr.innerHTML = `
+            <td class="rule-number" style="text-align: center; font-weight: bold; color: #64748b;"></td>
             <td>
                 <select class="form-input" style="padding: 4px;">
                     <option value="permit" ${rule.action === 'permit' ? 'selected' : ''}>Permit (許可)</option>
@@ -6503,15 +6516,17 @@ class NetworkSimulator {
                 <input type="text" class="form-input" value="${rule.destination}" placeholder="192.168.2.0/24 or any" style="padding: 4px;">
             </td>
             <td style="text-align: center;">
-                <button type="button" class="dialog-button delete-rule-btn" style="background-color: #ef4444; padding: 4px 8px; font-size: 11px;">削除</button>
+                <button type="button" class="dialog-button delete-rule-btn" style="background-color: #1e3a8a; color: white; padding: 4px 8px; font-size: 14px; font-weight: bold; border-radius: 4px;">×</button>
             </td>
         `;
 
         tr.querySelector('.delete-rule-btn').addEventListener('click', () => {
             tr.remove();
+            this.updateACLRuleNumbers();
         });
 
         tbody.appendChild(tr);
+        this.updateACLRuleNumbers();
     }
 
     // ACL設定の読み込み
