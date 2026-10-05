@@ -6457,7 +6457,7 @@ class NetworkSimulator {
                 // Default vlan to '1' if not set
                 const vlan = port.vlan || '1';
                 const vlanSelect = `
-                    <select class="form-input vlan-select" data-port-id="${port.id}" style="padding: 2px 4px; font-size: 11px;">
+                    <select class="form-input vlan-select" data-port-id="${port.id}" style="padding: 2px 4px; font-size: 11px; width: 100%; box-sizing: border-box;">
                         <option value="1" ${vlan === '1' ? 'selected' : ''}>VLAN 1</option>
                         <option value="2" ${vlan === '2' ? 'selected' : ''}>VLAN 2</option>
                         <option value="Trunk" ${vlan === 'Trunk' ? 'selected' : ''}>Trunk</option>
