@@ -5709,13 +5709,6 @@ class NetworkSimulator {
                 const isInbound = this.isInboundTraffic(currentDev, path, i, sourceDevice, targetDevice);
 
                 if (isOutbound) {
-                    if (currentDev.natEnabled === false) {
-                        const errMsg = `❌ NAT無効: プライベートIP (${sourceDevice.config?.ipAddress}) はインターネット上へ直接ルーティングできません。ルーターのNATを有効にしてください。`;
-                        this.updateStatus(errMsg);
-                        this.showDeviceToast(currentDev, `❌ NAT無効<br>プライベートIP転送不可`, 'snat');
-                        await this.blinkDevicesRed([currentDev]);
-                        return;
-                    }
 
                     const natResult = this.processOutboundNAT(currentDev, sourceDevice, targetDevice, currentLabel, options);
                     if (natResult) {
@@ -6191,17 +6184,6 @@ class NetworkSimulator {
             }
         }
 
-        // NAT設定（ルーターのみ表示）
-        const natConfigSection = document.getElementById('nat-config-section');
-        if (natConfigSection) {
-            if (this.selectedDevice.type === 'router') {
-                natConfigSection.style.display = 'block';
-                this.loadNATConfig(this.selectedDevice);
-            } else {
-                natConfigSection.style.display = 'none';
-            }
-        }
-
         // DHCPサーバー設定（ルーターのみ表示）
         const dhcpServerSection = document.getElementById('dhcp-server-section');
         if (dhcpServerSection && this.selectedDevice.type === 'router') {
@@ -6462,70 +6444,6 @@ class NetworkSimulator {
         arpBody.innerHTML = html;
     }
 
-    // NAT設定読み込み
-    loadNATConfig(router) {
-        if (!router.natTable) {
-            router.natTable = new Map();
-        }
-        if (router.natEnabled === undefined) {
-            router.natEnabled = true;
-        }
-
-        const natCheckbox = document.getElementById('nat-enabled');
-        if (natCheckbox) {
-            natCheckbox.checked = router.natEnabled !== false;
-        }
-
-        this.renderNATTable(router);
-
-        const clearBtn = document.getElementById('clear-nat-table-btn');
-        if (clearBtn) {
-            clearBtn.onclick = () => {
-                router.natTable.clear();
-                this.renderNATTable(router);
-                this.updateStatus(`🔄 ${router.name} のNAT変換テーブルをクリアしました`);
-            };
-        }
-    }
-
-    // NATテーブル描画
-    renderNATTable(router) {
-        const natBody = document.getElementById('nat-table-body');
-        if (!natBody) return;
-
-        if (!router.natTable || router.natTable.size === 0) {
-            natBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8; font-style: italic;">変換エントリなし</td></tr>';
-            return;
-        }
-
-        let html = '';
-        router.natTable.forEach((entry) => {
-            const proto = entry.protocol || 'TCP';
-            const local = (entry.insideLocalPort && entry.insideLocalPort !== '-') 
-                ? `${entry.insideLocalIP}:${entry.insideLocalPort}` 
-                : entry.insideLocalIP;
-            const global = (entry.insideGlobalPort && entry.insideGlobalPort !== '-') 
-                ? `${entry.insideGlobalIP}:${entry.insideGlobalPort}` 
-                : entry.insideGlobalIP;
-            const dest = (entry.outsideGlobalPort && entry.outsideGlobalPort !== '-') 
-                ? `${entry.outsideGlobalIP}:${entry.outsideGlobalPort}` 
-                : entry.outsideGlobalIP;
-            const status = entry.status || 'ESTABLISHED';
-            const badgeClass = (status === 'ESTABLISHED' || status === 'ACTIVE') ? 'connected' : 'disconnected';
-
-            html += `<tr>
-                <td><strong>${proto}</strong></td>
-                <td style="font-family: monospace;">${local}</td>
-                <td style="font-family: monospace; color: #059669; font-weight: bold;">${global}</td>
-                <td style="font-family: monospace;">${dest}</td>
-                <td><span class="status-badge ${badgeClass}">${status}</span></td>
-            </tr>`;
-        });
-
-        natBody.innerHTML = html;
-    }
-
-    // デバイス上のフローティング通知表示（NAT変換アニメーション等）
     showDeviceToast(device, message, type = 'snat') {
         const container = this.canvas.parentElement;
         if (!container) return;
@@ -8692,17 +8610,9 @@ class NetworkSimulator {
         
         // ルーターの場合はWAN設定とDHCPサーバー設定、NAT設定も保存
         if (this.currentDeviceConfig.type === 'router') {
-            const natCheckbox = document.getElementById('nat-enabled');
-            if (natCheckbox) {
-                this.currentDeviceConfig.natEnabled = natCheckbox.checked;
-            }
 
             // WAN設定を保存
             this.saveWANConfig();
-            
-            const dhcpLeaseTime = parseInt(document.getElementById('dhcp-lease-time').value) || 3600;
-            
-            // LAN1 設定
             const lan1IP = document.getElementById('lan1-ip').value;
             const lan1SubnetMask = document.getElementById('lan1-subnet-mask').value;
             const lan1DefaultGateway = document.getElementById('lan1-default-gateway').value;
@@ -10485,7 +10395,7 @@ class NetworkSimulator {
 
             // NAT設定の復元（ルーター用）
             if (device.type === 'router') {
-                device.natEnabled = deviceData.natEnabled !== undefined ? deviceData.natEnabled : true;
+                device.natEnabled = true;
                 device.natTable = new Map();
                 if (deviceData.natTable && Array.isArray(deviceData.natTable)) {
                     deviceData.natTable.forEach(entry => {
@@ -10677,7 +10587,7 @@ class NetworkSimulator {
 
                     // NAT設定の復元（ルーター用）
                     if (device.type === 'router') {
-                        device.natEnabled = deviceData.natEnabled !== undefined ? deviceData.natEnabled : true;
+                        device.natEnabled = true;
                         device.natTable = new Map();
                         if (deviceData.natTable && Array.isArray(deviceData.natTable)) {
                             deviceData.natTable.forEach(entry => {
@@ -11367,7 +11277,7 @@ class NetworkSimulator {
 
                     // NAT設定の復元（ルーター用）
                     if (device.type === 'router') {
-                        device.natEnabled = deviceData.natEnabled !== undefined ? deviceData.natEnabled : true;
+                        device.natEnabled = true;
                         device.natTable = new Map();
                         if (deviceData.natTable && Array.isArray(deviceData.natTable)) {
                             deviceData.natTable.forEach(entry => {
