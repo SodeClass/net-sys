@@ -1,13 +1,11 @@
 posts:
   - title: GitHubアカウントを作成する
     tag:
-      - ２学期前半
       - GitHubを使ってみよう
     body: https://github.com/
     code_lang: html
   - title: リポジトリを作成
     tag:
-      - ２学期前半
       - GitHubを使ってみよう
     image: images/スクリーンショット 2026-10-09 085754.png
     body: |
@@ -17,7 +15,6 @@ posts:
     code_lang: html
   - title: codespacesを開く
     tag:
-      - ２学期前半
       - GitHubを使ってみよう
     image: images/スクリーンショット 2026-10-09 090516.png
     body: |-
@@ -25,8 +22,6 @@ posts:
       クラウド上でvscodeと同じフォーマットのサービスが使える
     code_lang: html
   - title: 【自宅学習向け】個人サイトの作業フォルダをコピーしよう
-    tag:
-      - ２学期前半
     body: |-
       エクスプローラにフォルダをドラッグアンドドロップすればOK。
       ただし、追加で以下の作業をすること。
@@ -315,4 +310,16 @@ posts:
     tag:
       - ２学期前半
     body: なぜSQLインジェクション・XSSが起こるのか、対策の内容はどういったものかをレポートにまとめて提出すること。
+    code_lang: html
+  - title: codespaceの保存方法
+    tag:
+      - ２学期前半
+      - GitHubを使ってみよう
+    image: images/スクリーンショット 2026-10-09 120947.png
+    body: |-
+      codespaseはctrl+Sでの保存が可能だが、30日以上放置するとデータが消えてしまう。
+      放置しても消えないようにするためには、（詳細は省くが）次のことをする。
+
+      ①図を参考に、左端のアイコン一覧からソース管理を選択。
+      ②変更を保存したいファイル
     code_lang: html
