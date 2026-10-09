@@ -2548,7 +2548,6 @@ class NetworkSimulator {
             this.updateStatus('既に接続されています');
             return;
         }
-
         // 3. 既存の接続を削除（古いエッジの自動切断）
         // startPort に接続されていた既存の接続を削除
         const startExistingConns = this.connections.filter(conn => {
