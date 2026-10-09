@@ -23,7 +23,7 @@ posts:
     code_lang: html
   - title: 【自宅学習向け】個人サイトの作業フォルダをコピーしよう
     tag:
-      - ２学期前半
+      - GitHubを使ってみよう
     body: |-
       エクスプローラにフォルダをドラッグアンドドロップすればOK。
       ただし、追加で以下の作業をすること。
@@ -34,7 +34,6 @@ posts:
     code_lang: html
   - title: codespaceの保存方法
     tag:
-      - ２学期前半
       - GitHubを使ってみよう
     image: images/スクリーンショット 2026-10-09 123106.png
     body: |-
