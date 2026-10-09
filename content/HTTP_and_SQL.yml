@@ -24,6 +24,17 @@ posts:
       緑色の「<>code」ボタンから、緑色の「Create codespace on main」をクリック
       クラウド上でvscodeと同じフォーマットのサービスが使える
     code_lang: html
+  - title: 【自宅学習向け】個人サイトの作業フォルダをコピーしよう
+    tag:
+      - ２学期前半
+    body: |-
+      エクスプローラにフォルダをドラッグアンドドロップすればOK。
+      ただし、追加で以下の作業をすること。
+
+      ①秘密鍵ファイルを「.vscode」ファイルに置き、sftp.jsonの"remotePath"を書き換える。
+      　※Choose visibilityを"Private"にしないと秘密鍵が流出してしまうので注意！
+      ②sftp拡張機能を追加する。Natizyskunkのやつ
+    code_lang: html
   - title: ①データベースに触れる
     tag:
       - ２学期前半
@@ -304,14 +315,4 @@ posts:
     tag:
       - ２学期前半
     body: なぜSQLインジェクション・XSSが起こるのか、対策の内容はどういったものかをレポートにまとめて提出すること。
-    code_lang: html
-  - title: 【自宅学習向け】個人サイトの作業フォルダをコピーしよう
-    tag:
-      - ２学期前半
-    body: |-
-      エクスプローラにフォルダをドラッグアンドドロップすればOK。
-      ただし、追加で以下の作業をすること。
-
-      ①秘密鍵ファイルもエクスプローラ内に置く。※Choose visibilityを"Private"にしないと秘密鍵が流出してしまうので注意！
-      ②sftp拡張機能を追加する。Natizyskunkのやつ
     code_lang: html
