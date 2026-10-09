@@ -313,5 +313,5 @@ posts:
       ただし、追加で以下の作業をすること。
 
       ①秘密鍵ファイルもエクスプローラ内に置く。※Choose visibilityを"Private"にしないと秘密鍵が流出してしまうので注意！
-      ②
+      ②sftp拡張機能を追加する。Natizyskunkのやつ
     code_lang: html
