@@ -1,4 +1,29 @@
 posts:
+  - title: GitHubアカウントを作成する
+    tag:
+      - ２学期前半
+      - GitHubを使ってみよう
+    body: https://github.com/
+    code_lang: html
+  - title: リポジトリを作成
+    tag:
+      - ２学期前半
+      - GitHubを使ってみよう
+    image: images/スクリーンショット 2026-10-09 085754.png
+    body: |
+      右上のプラスボタンからNew repositoryを選択
+      初期設定は基本なんでもOKだが、
+      Choose visibilityを"Private"にすること。 
+    code_lang: html
+  - title: codespacesを開く
+    tag:
+      - ２学期前半
+      - GitHubを使ってみよう
+    image: images/スクリーンショット 2026-10-09 090516.png
+    body: |-
+      緑色の「<>code」ボタンから、緑色の「Create codespace on main」をクリック
+      クラウド上でvscodeと同じフォーマットのサービスが使える
+    code_lang: html
   - title: ①データベースに触れる
     tag:
       - ２学期前半
