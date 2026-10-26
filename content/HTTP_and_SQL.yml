@@ -4,7 +4,7 @@ posts:
       - ２学期前半
     body: |-
       まずはVScodeで拡張機能 "SQLite3 Editor" をインストール。
-      下のリンクからpokedex.dbをダウンロードし、プロジェクトフォルダ内に入れてVScodeで開いてみる。
+      その後、下のリンクからpokedex.dbをダウンロードし、プロジェクトフォルダ内に入れてVScodeで開いてみる。
 
       https://sodeclass.github.io/net-sys/pokedex.db
     code_lang: html
